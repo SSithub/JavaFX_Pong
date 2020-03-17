@@ -8,12 +8,12 @@ import static pong.Pong.ball;
 
 public class Paddle extends Rectangle {
 
-    Paddle(int width, int height, int x, int y) {
+    Paddle(int width, int height, int x, int y, Color c) {
         setTranslateX(x);
         setTranslateY(y);
         setWidth(width);
         setHeight(height);
-        setFill(Color.PALEVIOLETRED);
+        setFill(c);
     }
 
     void moveUp() {

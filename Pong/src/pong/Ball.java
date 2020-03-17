@@ -1,6 +1,7 @@
 package pong;
 
 import javafx.geometry.Bounds;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import static pong.Pong.SCREENHEIGHT;
 import static pong.Pong.SCREENWIDTH;
@@ -20,12 +21,13 @@ public class Ball extends Circle {
             this.y = y;
         }
     }
-    Vector v = new Vector(-5, 0);
+    Vector v = new Vector(-Pong.BALLSTARTSPEED, 0);
 
     Ball(int r, int x, int y) {
         setTranslateX(x);
         setTranslateY(y);
         setRadius(r);
+        setFill(Color.WHEAT);
     }
 
     void update() {
@@ -48,18 +50,32 @@ public class Ball extends Circle {
         } else if (getBoundsInParent().intersects(b1.getMinX(), b1.getMaxY(), b1.getWidth(), 0)//Bottoms of paddles
                 || getBoundsInParent().intersects(b2.getMinX(), b2.getMaxY(), b2.getWidth(), 0)) {
             v.y = Math.abs(v.y) + 1;
-        } else if (getBoundsInParent().intersects(b1.getMaxX(), b1.getMinY(), 0, b1.getHeight())//Front & back of paddle 1
-                || getBoundsInParent().intersects(b1.getMinX(), b1.getMinY(), 0, b1.getHeight())) {
+        } else if (getBoundsInParent().intersects(b1.getMaxX(), b1.getMinY(), 0, b1.getHeight())) {//Paddle 1 front
+            double distanceFromCenter = (getTranslateY() + getRadius()) - (b1.getMaxY() - b1.getHeight() / 2);
+            v.x = Math.abs(v.x) + 1;
+            v.y = distanceFromCenter / 10;
+        } else if (getBoundsInParent().intersects(b2.getMinX(), b2.getMinY(), 0, b2.getHeight())) {//Paddle 2 front
+            double distanceFromCenter = (getTranslateY() + getRadius()) - (b2.getMaxY() - b2.getHeight() / 2);
+            v.x = -(Math.abs(v.x) + 1);
+            v.y = distanceFromCenter / 10;
+        } else if (getBoundsInParent().intersects(b1.getMinX(), b1.getMinY(), 0, b1.getHeight())) {//Paddle 1 back
             v.x *= -1;
-        } else if (getBoundsInParent().intersects(b2.getMinX(), b2.getMinY(), 0, b2.getHeight())//Front & back of paddle 2
-                || getBoundsInParent().intersects(b2.getMaxX(), b2.getMinY(), 0, b2.getHeight())) {
+        } else if (getBoundsInParent().intersects(b2.getMaxX(), b2.getMinY(), 0, b2.getHeight())) {//Paddle 2 back
             v.x *= -1;
         }
-        if (getBoundsInParent().intersects(0, 0, SCREENWIDTH, 0) || getBoundsInParent().intersects(0, SCREENHEIGHT, SCREENWIDTH, 1)) {//Top and bottom of the screen
-            v.y *= -1;
+        if (getBoundsInParent().intersects(0, 0, SCREENWIDTH, 0)) {//Top of the screen
+            v.y = Math.abs(v.y);
+        } else if (getBoundsInParent().intersects(0, SCREENHEIGHT, SCREENWIDTH, 0)) {//Bottom of the screen
+            v.y = -Math.abs(v.y);
         }
-        if (getBoundsInParent().intersects(0, 0, 1, SCREENHEIGHT) || getBoundsInParent().intersects(SCREENWIDTH, 0, 1, SCREENHEIGHT)) {
-            v.x *= -1;
+        if (getBoundsInParent().intersects(0, 0, 0, SCREENHEIGHT)) {//Left of the screen
+//            v.x = Math.abs(v.x);
+            Pong.reset(false);
+            Pong.incrementText(Pong.p2score);
+        } else if (getBoundsInParent().intersects(SCREENWIDTH, 0, 0, SCREENHEIGHT)) {//Right of the screen
+//            v.x = -Math.abs(v.x);
+            Pong.reset(true);
+            Pong.incrementText(Pong.p1score);
         }
         if (Math.abs(v.x) > MAXVELOCITY) {
             v.x = v.x / Math.abs(v.x) * MAXVELOCITY;
@@ -67,5 +83,10 @@ public class Ball extends Circle {
         if (Math.abs(v.y) > MAXVELOCITY) {
             v.y = v.y / Math.abs(v.y) * MAXVELOCITY;
         }
+    }
+
+    public void setVector(int a, int b) {
+        v.x = a;
+        v.y = b;
     }
 }
