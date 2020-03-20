@@ -2,9 +2,7 @@ package pong;
 
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import static pong.Pong.PADDLESPEED;
-import static pong.Pong.SCREENHEIGHT;
-import static pong.Pong.ball;
+import static pong.Pong.*;
 
 public class Paddle extends Rectangle {
 
