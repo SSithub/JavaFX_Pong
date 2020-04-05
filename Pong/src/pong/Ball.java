@@ -57,11 +57,11 @@ public class Ball extends Circle {
         } else if (getBoundsInParent().intersects(b1.getMaxX(), b1.getMinY(), 0, b1.getHeight())) {//Paddle 1 front
             double distanceFromCenter = (getTranslateY() + getRadius()) - (b1.getMaxY() - b1.getHeight() / 2);
             v.x = Math.abs(v.x) + 1;
-            v.y = distanceFromCenter / 10;
+            v.y = distanceFromCenter/7;
         } else if (getBoundsInParent().intersects(b2.getMinX(), b2.getMinY(), 0, b2.getHeight())) {//Paddle 2 front
             double distanceFromCenter = (getTranslateY() + getRadius()) - (b2.getMaxY() - b2.getHeight() / 2);
             v.x = -(Math.abs(v.x) + 1);
-            v.y = distanceFromCenter / 10;
+            v.y = distanceFromCenter/7;
         } else if (getBoundsInParent().intersects(b1.getMinX(), b1.getMinY(), 0, b1.getHeight())) {//Paddle 1 back
             v.x *= -1;
         } else if (getBoundsInParent().intersects(b2.getMaxX(), b2.getMinY(), 0, b2.getHeight())) {//Paddle 2 back

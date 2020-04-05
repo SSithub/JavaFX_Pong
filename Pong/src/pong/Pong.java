@@ -60,8 +60,8 @@ public class Pong extends Application {
     BasicAI right2 = new BasicAI(PADDLERIGHT);
     BasicAI left2 = new BasicAI(PADDLELEFT);
     //1 = Deep learning; 2 = Basic AI; Else = None
-    int leftSetting = 1;
-    int rightSetting = 2;
+    int leftSetting = 2;
+    int rightSetting = 1;
 
     Timeline loop = new Timeline(new KeyFrame(Duration.millis(16), handler -> {
         if (leftSetting == 1) {

@@ -42,8 +42,9 @@ public class DeepLearningAgent {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            nn = new NNLib().new NN("right", 7, LR, INITIALIZER, HIDDENACTIVATION, OUTPUTACTIVATION, LOSSFUNCTION, OPTIMIZER, ARCHITECTURE);
+            nn = new NNLib().new NN("Adam", 7, LR, INITIALIZER, HIDDENACTIVATION, OUTPUTACTIVATION, LOSSFUNCTION, OPTIMIZER, ARCHITECTURE);
             tn = nn.clone();
+            NNLib.graphJFX(false, nn);
         } else {
             throw new IllegalArgumentException();
         }
