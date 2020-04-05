@@ -30,14 +30,14 @@ public class Ball extends Circle {
         String update = "";
         for (int i = 0; i < Math.abs(v.x); i++) {
             update = collisions();
-            if(!update.equals("")){
+            if (!update.equals("")) {
                 return update;
             }
             setTranslateX(getTranslateX() + (v.x > 0 ? 1 : -1));
         }
         for (int i = 0; i < Math.abs(v.y); i++) {
             update = collisions();
-            if(!update.equals("")){
+            if (!update.equals("")) {
                 return update;
             }
             setTranslateY(getTranslateY() + (v.y > 0 ? 1 : -1));

@@ -3,76 +3,111 @@ package pong;
 import java.util.ArrayList;
 import javafx.scene.input.KeyCode;
 import static pong.Pong.*;
+import pong.NNLib.*;
 
 public class DeepLearningAgent {
 
     final String PADDLE;
     final KeyCode UP;
     final KeyCode DOWN;
-    NNest.NN dqn;
-    final int[] ARCHITECTURE = {14, 7, 4, 2};
+    NN nn;
+    NN tn;
+    final double LR = Math.pow(10, -4);
+    final Initializer INITIALIZER = Initializer.HE;
+    final ActivationFunction HIDDENACTIVATION = ActivationFunction.LEAKYRELU;
+    final ActivationFunction OUTPUTACTIVATION = ActivationFunction.LINEAR;
+    final LossFunction LOSSFUNCTION = LossFunction.HUBERPSEUDO;
+    final Optimizer OPTIMIZER = Optimizer.AMSGRAD;
+    final int[] ARCHITECTURE = {14, 100, 2};
     ArrayList<Experience> replay = new ArrayList<>();
-    double exploration = .1;
-    boolean start = true;
-//    int counter = 0;
-    float[][] s;
-    int a;
-    final int BATCHSIZE = 1000;
-    final float DISCOUNT = .1f;
-    int timeAlive = 0;
+    private int trainCount = 0;
+
+    private final int TRAINSBEFORETNRESET = 20;
+    private final int BATCH = 100;
+    private final int REPLAYSIZE = 10000;
+    private boolean start = true;
+    private float[][] s;
+    private int a;
+    private float[][] s_;
+    private final float DISCOUNT = .9f;
 
     DeepLearningAgent(String paddle) {
         if (paddle.equals(PADDLELEFT)) {
             PADDLE = paddle;
             UP = P1UP;
             DOWN = P1DOWN;
-            dqn = new NNest().new NN("left ", .0001, 0, "relu", "linear", "quadratic", "adam", ARCHITECTURE);
+            nn = new NNLib().new NN("left", 7, LR, INITIALIZER, HIDDENACTIVATION, OUTPUTACTIVATION, LOSSFUNCTION, OPTIMIZER, ARCHITECTURE);
+            tn = nn.clone();
         } else if (paddle.equals(PADDLERIGHT)) {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            dqn = new NNest().new NN("right ", .0001, 0, "relu", "linear", "quadratic", "adam", ARCHITECTURE);
+            nn = new NNLib().new NN("right", 7, LR, INITIALIZER, HIDDENACTIVATION, OUTPUTACTIVATION, LOSSFUNCTION, OPTIMIZER, ARCHITECTURE);
+            tn = nn.clone();
         } else {
-            throw new IllegalArgumentException("Invalid Paddle");
+            throw new IllegalArgumentException();
         }
-        dqn.load();
+        nn.load();
+//        NNLib.graphJFX(false, nn);
     }
 
     public void update() {
-        if (!start) {//Observe the new state and reward
-            replay.add(new Experience(s, a, getState(), getReward(), !update.equals("")));
+        if (frames % FRAMESKIP == 0) {
+            if (!start) {
+                s_ = getState();
+                addExperience(s, a, getReward(), s_, false);
+                s = getState();
+                if (nn.getRandom().nextDouble() < exploration) {
+                    if (nn.getRandom().nextDouble() < .5) {
+                        a = 0;
+                    } else {
+                        a = 1;
+                    }
+                } else {
+                    float[][] Q_sa = nn.feedforward(s);
+                    a = nn.argmax(Q_sa);
+                }
+
+                if (a == 0) {
+                    KEYS.put(DOWN, false);
+                    KEYS.put(UP, true);
+                } else {
+                    KEYS.put(UP, false);
+                    KEYS.put(DOWN, true);
+                }
+            } else {//initial observation
+                s = getState();
+                if (nn.getRandom().nextDouble() < exploration) {
+                    if (nn.getRandom().nextDouble() < .5) {
+                        a = 0;
+                    } else {
+                        a = 1;
+                    }
+                } else {
+                    float[][] Q_sa = nn.feedforward(s);
+                    a = nn.argmax(Q_sa);
+                }
+                if (a == 0) {
+                    KEYS.put(DOWN, false);
+                    KEYS.put(UP, true);
+                } else {
+                    KEYS.put(UP, false);
+                    KEYS.put(DOWN, true);
+                }
+                start = false;
+            }
         }
-        s = getState();
-        //Choose action
-        if (Math.random() < exploration) {
-            a = (int) (Math.random() * 2);
-        } else {
-            a = dqn.argmax(dqn.feedforward(s));
-        }
-        //Input action
-        if (a == 0) {
-            KEYS.put(DOWN, false);
-            KEYS.put(UP, true);
-        } else {
-            KEYS.put(UP, false);
-            KEYS.put(DOWN, true);
-        }
-        start = false;
-//        counter++;
-//        if (counter % 1000 == 0) {
-//            train();
-//        }
-        timeAlive++;
     }
 
     public void reset() {
+        s_ = getState();
+        addExperience(s, a, getReward(), s_, true);//Add terminal state
         train();
         start = true;
-        timeAlive = 0;
     }
 
     public float[][] getState() {
-        return dqn.normalizeTanhEstimator(new float[][]{{
+        return nn.scale(.001f, new float[][]{{
             (float) ball.getBoundsInParent().getMinX(),
             (float) ball.getBoundsInParent().getMaxX(),
             (float) ball.getBoundsInParent().getMinY(),
@@ -91,49 +126,71 @@ public class DeepLearningAgent {
     }
 
     public float getReward() {
-        if (update.equals(PADDLE)) {
-            return 1;
-        } else if (update.equals("")) {
+        if (update.equals("")) {
             return 0;
+        } else if (update.equals(PADDLELEFT)) {
+            if (PADDLE.equals(PADDLELEFT)) {
+                return 1;
+            } else {
+                return -1;
+            }
         } else {
-            return -1;
+            if (PADDLE.equals(PADDLELEFT)) {
+                return -1;
+            } else {
+                return 1;
+            }
         }
-//        return timeAlive;
+    }
+
+    public void addExperience(float[][] s, int a, float r, float[][] s_, boolean t) {
+        replay.add(new Experience(s, a, r, s_, t));
+        if (replay.size() > REPLAYSIZE) {
+            replay.remove(0);
+        }
     }
 
     class Experience {
 
         float[][] s;
         int a;
-        float[][] s_;
         float r;
-        boolean terminal;
+        float[][] s_;
+        boolean t;
 
-        Experience(float[][] state, int action, float[][] nextState, float reward, boolean terminalState) {
+        Experience(float[][] state, int action, float reward, float[][] statePrime, boolean terminal) {
             s = state;
             a = action;
-            s_ = nextState;
             r = reward;
-            terminal = terminalState;
+            s_ = statePrime;
+            t = terminal;
         }
     }
 
     void train() {
-        for (int i = 0; i < BATCHSIZE; i++) {
-            Experience e = replay.get((int) (Math.random() * replay.size()));
-            float target;
-            if (e.terminal) {
-                target = e.r;
-            } else {
-                float[][] predictions = dqn.feedforward(e.s_);
-                target = e.r + DISCOUNT * predictions[0][dqn.argmax(predictions)];
+        for (int i = 0; i < BATCH; i++) {
+            try {
+                int index = nn.getRandom().nextInt(replay.size());
+                Experience e = replay.get(index);
+                float[][] Q_sa = nn.feedforward(e.s);
+                float[][] Q_sa_ = tn.feedforward(e.s_);
+                if (!e.t) {
+                    Q_sa[0][e.a] = e.r + DISCOUNT * Q_sa_[0][tn.argmax(Q_sa_)];
+                } else {
+                    Q_sa[0][e.a] = e.r;
+                }
+
+//                nn.print(Q_sa, "before");
+                nn.backpropagation(e.s, Q_sa);
+//                nn.print(nn.feedforward(e.s), "after");
+            } catch (Exception e) {
+
             }
-//            System.out.println(target);
-            float[][] targets = dqn.feedforward(s);
-            targets[0][e.a] = target;
-            dqn.backpropagation(e.s, targets);
         }
-        dqn.save();
-        replay = new ArrayList<>();
+        trainCount++;
+        if (trainCount % TRAINSBEFORETNRESET == 0) {
+            tn = nn.clone();
+        }
+        nn.save();
     }
 }
