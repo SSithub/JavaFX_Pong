@@ -12,24 +12,26 @@ public class DeepLearningAgent {
     final KeyCode DOWN;
     NN nn;
     NN tn;
-    final double LR = Math.pow(10, -4);
+    final double LR = Math.pow(10, -5);
     final Initializer INITIALIZER = Initializer.HE;
     final ActivationFunction HIDDENACTIVATION = ActivationFunction.LEAKYRELU;
     final ActivationFunction OUTPUTACTIVATION = ActivationFunction.LINEAR;
-    final LossFunction LOSSFUNCTION = LossFunction.HUBERPSEUDO;
+    final LossFunction LOSSFUNCTION = LossFunction.QUADRATIC;
     final Optimizer OPTIMIZER = Optimizer.AMSGRAD;
-    final int[] ARCHITECTURE = {14, 100, 2};
+    final int[] ARCHITECTURE = {14, 50, 50, 2};
     ArrayList<Experience> replay = new ArrayList<>();
     private int trainCount = 0;
 
     private final int TRAINSBEFORETNRESET = 20;
-    private final int BATCH = 100;
-    private final int REPLAYSIZE = 10000;
+    private final int BATCH = 500;
+    private final int REPLAYSIZE = 20000;
     private boolean start = true;
     private float[][] s;
     private int a;
     private float[][] s_;
     private final float DISCOUNT = .9f;
+
+    private final boolean TRAINING = true;
 
     DeepLearningAgent(String paddle) {
         if (paddle.equals(PADDLELEFT)) {
@@ -42,9 +44,9 @@ public class DeepLearningAgent {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            nn = new NNLib().new NN("Adam", 7, LR, INITIALIZER, HIDDENACTIVATION, OUTPUTACTIVATION, LOSSFUNCTION, OPTIMIZER, ARCHITECTURE);
+            nn = new NNLib().new NN("right", 214, LR, INITIALIZER, HIDDENACTIVATION, OUTPUTACTIVATION, LOSSFUNCTION, OPTIMIZER, ARCHITECTURE);
             tn = nn.clone();
-            NNLib.graphJFX(false, nn);
+//            NNLib.graphJFX(false, nn);
         } else {
             throw new IllegalArgumentException();
         }
@@ -103,7 +105,9 @@ public class DeepLearningAgent {
     public void reset() {
         s_ = getState();
         addExperience(s, a, getReward(), s_, true);//Add terminal state
-        train();
+        if (TRAINING) {
+            train();
+        }
         start = true;
     }
 
