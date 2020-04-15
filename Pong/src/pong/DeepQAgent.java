@@ -5,14 +5,14 @@ import javafx.scene.input.KeyCode;
 import static pong.Pong.*;
 import pong.NNLib.*;
 
-public class DeepLearningAgent {
+public class DeepQAgent {
 
     final String PADDLE;
     final KeyCode UP;
     final KeyCode DOWN;
     NN nn;
     NN tn;
-    final double LR = Math.pow(10, -5);
+    final double LR = Math.pow(10, -6);
     final Initializer INITIALIZER = Initializer.HE;
     final ActivationFunction HIDDENACTIVATION = ActivationFunction.LEAKYRELU;
     final ActivationFunction OUTPUTACTIVATION = ActivationFunction.LINEAR;
@@ -33,7 +33,7 @@ public class DeepLearningAgent {
 
     private final boolean TRAINING = true;
 
-    DeepLearningAgent(String paddle) {
+    DeepQAgent(String paddle) {
         if (paddle.equals(PADDLELEFT)) {
             PADDLE = paddle;
             UP = P1UP;

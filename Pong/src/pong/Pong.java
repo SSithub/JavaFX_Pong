@@ -41,7 +41,7 @@ public class Pong extends Application {
 //    final String STYLE = "-fx-font: 100 '" + Font.getFamilies().get((int) (Math.random() * Font.getFamilies().size())) + "';";
     final String STYLE = "-fx-font: 100 'MS PGothic';";
     static String update = "";
-    static double exploration = .1;
+    static double exploration = .05;
     static long frames;
 
     static final int PADDLEHEIGHT = 200;
@@ -55,8 +55,8 @@ public class Pong extends Application {
     static Paddle p1 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P1COLOR);
     static Paddle p2 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, 11 * SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P2COLOR);
 
-    DeepLearningAgent right = new DeepLearningAgent(PADDLERIGHT);
-    DeepLearningAgent left = new DeepLearningAgent(PADDLELEFT);
+    DeepQAgent right = new DeepQAgent(PADDLERIGHT);
+    DeepQAgent left = new DeepQAgent(PADDLELEFT);
     BasicAI right2 = new BasicAI(PADDLERIGHT);
     BasicAI left2 = new BasicAI(PADDLELEFT);
     //1 = Deep learning; 2 = Basic AI; Else = None
