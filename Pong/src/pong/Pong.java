@@ -22,8 +22,10 @@ import javafx.util.Duration;
 
 public class Pong extends Application {
 
-    static final int SCREENWIDTH = (int) Screen.getPrimary().getBounds().getWidth();
-    static final int SCREENHEIGHT = (int) Screen.getPrimary().getBounds().getHeight();
+//    static final int SCREENWIDTH = (int) Screen.getPrimary().getBounds().getWidth();
+//    static final int SCREENHEIGHT = (int) Screen.getPrimary().getBounds().getHeight();
+    static final int SCREENWIDTH = 1500;
+    static final int SCREENHEIGHT = 800;
     static final Group ROOT = new Group();
     Rectangle back = new Rectangle(SCREENWIDTH, SCREENHEIGHT, Color.valueOf("0x363636"));
     static final KeyCode P1UP = KeyCode.W;
@@ -41,39 +43,26 @@ public class Pong extends Application {
 //    final String STYLE = "-fx-font: 100 '" + Font.getFamilies().get((int) (Math.random() * Font.getFamilies().size())) + "';";
     final String STYLE = "-fx-font: 100 'MS PGothic';";
     static String update = "";
-    static double exploration = .05;
+    static double exploration = 0.2;
     static long frames;
 
-    static final int PADDLEHEIGHT = 200;
-    static final int PADDLEWIDTH = 20;
+    static final int PADDLEHEIGHT = SCREENHEIGHT / 8;
+    static final int PADDLEWIDTH = SCREENWIDTH / 100;
     static final int BALLRADIUS = 5;
-    static final int MAXVELOCITY = 1000;
-    static final int PADDLESPEED = 15;
+    static final int MAXVELOCITY = 100;
+    static final int PADDLESPEED = 10;
     static final int BALLSTARTSPEED = 5;
-    static final int FRAMESKIP = 5;
+    static final int FRAMESKIP = 4;
 
     static Paddle p1 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P1COLOR);
     static Paddle p2 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, 11 * SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P2COLOR);
-
-    DeepQAgent right = new DeepQAgent(PADDLERIGHT);
-    DeepQAgent left = new DeepQAgent(PADDLELEFT);
-    BasicAI right2 = new BasicAI(PADDLERIGHT);
-    BasicAI left2 = new BasicAI(PADDLELEFT);
-    //1 = Deep learning; 2 = Basic AI; Else = None
-    int leftSetting = 2;
-    int rightSetting = 1;
+    
+    AI right = new AI_Q(PADDLERIGHT);
+    AI left = new AI_Basic(PADDLELEFT);
 
     Timeline loop = new Timeline(new KeyFrame(Duration.millis(16), handler -> {
-        if (leftSetting == 1) {
-            left.update();
-        } else if (leftSetting == 2) {
-            left2.update();
-        }
-        if (rightSetting == 1) {
-            right.update();
-        } else if (rightSetting == 2) {
-            right2.update();
-        }
+        right.update();
+        left.update();
         if (update.equals(PADDLELEFT)) {
             reset(true);
         } else if (update.equals(PADDLERIGHT)) {
@@ -100,6 +89,9 @@ public class Pong extends Application {
     }
 
     public void reset(boolean p1win) {
+        left.reset();
+        right.reset();
+        KEYS.clear();
         p1.setTranslateX(SCREENWIDTH / 12 - PADDLEWIDTH / 2);
         p1.setTranslateY(SCREENHEIGHT / 2 - PADDLEHEIGHT / 2);
         p2.setTranslateX(11 * SCREENWIDTH / 12 - PADDLEWIDTH / 2);
@@ -111,12 +103,6 @@ public class Pong extends Application {
         } else {
             ball.setVector(-BALLSTARTSPEED, 0);
         }
-        if (leftSetting == 1) {
-            left.reset();
-        }
-        if (rightSetting == 1) {
-            right.reset();
-        }
         if (update.equals(PADDLELEFT)) {
             incrementText(P1SCORE);
         } else {
@@ -126,6 +112,7 @@ public class Pong extends Application {
     }
 
     public void setup() {
+        //Adding the scores
         P1SCORE.setStyle(STYLE);
         P1SCORE.setFill(P1COLOR);
         P2SCORE.setStyle(STYLE);
@@ -139,7 +126,7 @@ public class Pong extends Application {
         ROOT.getChildren().addAll(back, box, p1, p2, ball);
         loop.setCycleCount(Animation.INDEFINITE);
         loop.play();
-
+        //Adding the game speed slider
         Slider timeScaleSlider = new Slider();
         timeScaleSlider.setPrefWidth(200);
         timeScaleSlider.setMax(1500);
@@ -151,7 +138,7 @@ public class Pong extends Application {
         timeScaleSlider.setTranslateX(20);
         timeScaleSlider.setTranslateY(20);
         ROOT.getChildren().addAll(timeScaleSlider);
-
+        //Adding the exploration rate slider
         Slider eSlider = new Slider();
         eSlider.setValue(exploration);
         eSlider.setMin(0);
@@ -182,7 +169,10 @@ public class Pong extends Application {
             KEYS.put(event.getCode(), false);
         });
         stage.setScene(scene);
-        stage.setFullScreen(true);
+//        stage.setFullScreen(true);
+        stage.setResizable(false);
+        stage.setHeight(SCREENHEIGHT + 35);
+        stage.setWidth(SCREENWIDTH);
         stage.setFullScreenExitHint("");
         stage.show();
         System.out.println(P1SCORE.getFont().getName());

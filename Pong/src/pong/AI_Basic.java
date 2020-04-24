@@ -3,13 +3,13 @@ package pong;
 import javafx.scene.input.KeyCode;
 import static pong.Pong.*;
 
-public class BasicAI {
+public class AI_Basic implements AI {
 
     final KeyCode UP;
     final KeyCode DOWN;
     final Paddle p;
 
-    BasicAI(String paddle) {
+    AI_Basic(String paddle) {
         if (paddle.equals(PADDLELEFT)) {
             UP = P1UP;
             DOWN = P1DOWN;
@@ -23,7 +23,7 @@ public class BasicAI {
         }
     }
 
-    void update() {
+    public void update() {
         if (frames % FRAMESKIP == 0) {
             if (ball.getBoundsInParent().getMaxY() - ball.getRadius() > p.getBoundsInParent().getMaxY() - p.getBoundsInParent().getHeight() / 2) {
                 KEYS.put(UP, false);
@@ -33,5 +33,9 @@ public class BasicAI {
                 KEYS.put(UP, true);
             }
         }
+    }
+
+    @Override
+    public void reset() {
     }
 }
