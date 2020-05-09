@@ -7,6 +7,7 @@ import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Slider;
 import javafx.scene.input.KeyCode;
@@ -27,7 +28,7 @@ public class Pong extends Application {
     static final int SCREENWIDTH = 1500;
     static final int SCREENHEIGHT = 800;
     static final Group ROOT = new Group();
-    Rectangle back = new Rectangle(SCREENWIDTH, SCREENHEIGHT, Color.valueOf("0x363636"));
+    static final Rectangle BACKGROUND = new Rectangle(SCREENWIDTH, SCREENHEIGHT, Color.valueOf("0x363636"));
     static final KeyCode P1UP = KeyCode.W;
     static final KeyCode P1DOWN = KeyCode.S;
     static final KeyCode P2UP = KeyCode.UP;
@@ -52,7 +53,7 @@ public class Pong extends Application {
     static final int MAXVELOCITY = 100;
     static final int PADDLESPEED = 10;
     static final int BALLSTARTSPEED = 5;
-    static final int FRAMESKIP = 4;
+    static final int FRAMESKIP = 1;
 
     static Paddle p1 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P1COLOR);
     static Paddle p2 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, 11 * SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P2COLOR);
@@ -122,8 +123,9 @@ public class Pong extends Application {
         VBox box = new VBox(tf);
         box.setAlignment(Pos.BOTTOM_CENTER);
         box.setPrefSize(SCREENWIDTH, SCREENHEIGHT);
+        //Setting up objects and game loop
         ball = new Ball(BALLRADIUS, SCREENWIDTH / 2 - BALLRADIUS, SCREENHEIGHT / 2 - BALLRADIUS);
-        ROOT.getChildren().addAll(back, box, p1, p2, ball);
+        ROOT.getChildren().addAll(BACKGROUND, box, p1, p2, ball);
         loop.setCycleCount(Animation.INDEFINITE);
         loop.play();
         //Adding the game speed slider

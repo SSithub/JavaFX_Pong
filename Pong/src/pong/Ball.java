@@ -55,13 +55,11 @@ public class Ball extends Circle {
                 || getBoundsInParent().intersects(b2.getMinX(), b2.getMaxY(), b2.getWidth(), 0)) {
             v.y = Math.abs(v.y) + 1;
         } else if (getBoundsInParent().intersects(b1.getMaxX(), b1.getMinY(), 0, b1.getHeight())) {//Paddle 1 front
-            double distanceFromCenter = (getTranslateY() + getRadius()) - (b1.getMaxY() - b1.getHeight() / 2);
             v.x = Math.abs(v.x) + 1;
-            v.y = distanceFromCenter/7;
+            v.y = formulaY(b1);
         } else if (getBoundsInParent().intersects(b2.getMinX(), b2.getMinY(), 0, b2.getHeight())) {//Paddle 2 front
-            double distanceFromCenter = (getTranslateY() + getRadius()) - (b2.getMaxY() - b2.getHeight() / 2);
             v.x = -(Math.abs(v.x) + 1);
-            v.y = distanceFromCenter/7;
+            v.y = formulaY(b2);
         } else if (getBoundsInParent().intersects(b1.getMinX(), b1.getMinY(), 0, b1.getHeight())) {//Paddle 1 back
             v.x *= -1;
         } else if (getBoundsInParent().intersects(b2.getMaxX(), b2.getMinY(), 0, b2.getHeight())) {//Paddle 2 back
@@ -86,6 +84,11 @@ public class Ball extends Circle {
             v.y = v.y / Math.abs(v.y) * MAXVELOCITY;
         }
         return "";
+    }
+
+    private double formulaY(Bounds b) {
+        double distanceFromCenter = (getTranslateY() + getRadius()) - (b.getMaxY() - b.getHeight() / 2);
+        return (distanceFromCenter / 10) * (Math.sqrt(Math.abs(v.x)) / 2);
     }
 
     public void setVector(int a, int b) {

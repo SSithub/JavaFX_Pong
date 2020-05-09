@@ -13,19 +13,17 @@ public class AI_Q implements AI {
     final KeyCode DOWN;
     NN nn;
     NN tn;
-    final double LR = .001;
-    final BiFunction<float[][], float[][], Object[]> LF = LossFunction.HUBER(.1f);
-    final TriFunction<Float, float[][], float[][][], float[][][][]> OPT = Optimizer.ADAM;
-    Layer[] LAYERS = {new LayerDense(10, 50, ActivationFunction.LEAKYRELU, Initializer.HE),
-        new LayerDense(50, 50, ActivationFunction.LEAKYRELU, Initializer.HE),
-        new LayerDense(50, 50, ActivationFunction.LEAKYRELU, Initializer.HE),
-        new LayerDense(50, 2, ActivationFunction.LINEAR, Initializer.VANILLA)};
+    final double LR = .0000001;
+    final BiFunction<float[][], float[][], Object[]> LF = LossFunction.HUBER(1);
+    final QuadFunction<Integer, Float, float[][], float[][][], float[][][][]> OPT = Optimizer.ADAM;
+    Layer[] LAYERS = {new Layer.Dense(10, 50, ActivationFunction.LEAKYRELU, Initializer.HE),
+        new Layer.Dense(50, 2, ActivationFunction.LINEAR, Initializer.VANILLA)};
     ArrayList<Experience> replay = new ArrayList<>();
     private int trainCount = 0;
 
-    private final int TRAINSBEFORETNRESET = 10;
-    private final int BATCH = 500;
-    private final int REPLAYSIZE = 5000;
+    private final int TRAINSBEFORETNRESET = 20;
+    private final int REPLAYSIZE = 10000;
+    private final int BATCH = 1000;
     private boolean start = true;
     private float[][] s;
     private int a;
@@ -35,24 +33,27 @@ public class AI_Q implements AI {
     private final boolean TRAINING = true;
 
     AI_Q(String paddle) {
+        String name = "";
         if (paddle.equals(PADDLELEFT)) {
             PADDLE = paddle;
             UP = P1UP;
             DOWN = P1DOWN;
-            nn = new NNLib().new NN("leftQ", 777, LR, LF, OPT, LAYERS);
-            tn = nn.clone();
+            name = "leftQ";
         } else if (paddle.equals(PADDLERIGHT)) {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            nn = new NNLib().new NN("rightQ", 897986, LR, LF, OPT, LAYERS);
-            tn = nn.clone();
-//            graphJFX(false, nn);
+            name = "rightQ";
         } else {
             throw new IllegalArgumentException();
         }
+        nn = new NNLib().new NN(name, 7777, LR, LF, OPT, LAYERS);
         nn.load();
-        NNLib.graphJFX(false, nn);
+        tn = nn.clone();
+        tn.setLabel("Target Network");
+        NNLib.setInfoUpdateRate(500);
+        NNLib.showInfo(infoLayers, nn);
+//        NNLib.showInfo(infoLayers, tn);
     }
 
     @Override
@@ -63,7 +64,7 @@ public class AI_Q implements AI {
                 start = false;
             } else {
                 s_ = getState();
-                addExperience(s, a, getReward(), s_, false);
+                addExperience(s, a, 0, s_, false);
                 s = getState();
             }
             //Decide on an action to take
@@ -75,8 +76,8 @@ public class AI_Q implements AI {
                 }
             } else {
                 float[][] Q_sa = nn.feedforward(s);
-//                print(s,"state");
-//                print(Q_sa,"Q_sa");
+//                print(s);
+//                print(Q_sa);
                 a = argmax(Q_sa);
             }
             //Input the action into the environment
@@ -101,7 +102,7 @@ public class AI_Q implements AI {
     }
 
     public float[][] getState() {
-        return new float[][]{{
+        return normalizeZScore(new float[][]{{
             (float) ball.getBoundsInParent().getMinX(),
             (float) ball.getBoundsInParent().getMaxX(),
             (float) ball.getBoundsInParent().getMinY(),
@@ -112,7 +113,7 @@ public class AI_Q implements AI {
             (float) p1.getBoundsInParent().getMaxY(),
             (float) p2.getBoundsInParent().getMinY(),
             (float) p2.getBoundsInParent().getMaxY()
-        }};
+        }});//ROOT.snapshot
     }
 
     public float getReward() {
@@ -159,27 +160,20 @@ public class AI_Q implements AI {
 
     void train() {
         for (int i = 0; i < BATCH; i++) {
-//            try {
             int index = nn.getRandom().nextInt(replay.size());
             Experience e = replay.get(index);
             float[][] Q_sa = nn.feedforward(e.s);
-            float[][] Q_sa_ = tn.feedforward(e.s_);
             if (!e.t) {
+                float[][] Q_sa_ = tn.feedforward(e.s_);
                 Q_sa[0][e.a] = e.r + DISCOUNT * Q_sa_[0][argmax(Q_sa_)];
             } else {
                 Q_sa[0][e.a] = e.r;
             }
-//                print(nn.feedforward(e.s), "before");
-//                print(Q_sa, "Q_sa");
             nn.backpropagation(e.s, Q_sa);
-//                print(nn.feedforward(e.s), "after");
-//            } catch (Exception e) {
-//
-//            }
         }
         trainCount++;
         if (trainCount % TRAINSBEFORETNRESET == 0) {
-            tn = nn.clone();
+            tn.copyParameters(nn);
             nn.save();
         }
     }
