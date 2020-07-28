@@ -1,12 +1,15 @@
 package pong;
 
 import java.util.ArrayList;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import static pong.Pong.*;
 import pong.NNlib.*;
 import static pong.NNlib.*;
 
-public class AI_Q implements AI {
+public class AI_Qcnn implements AI {
 
     final String PADDLE;
     final KeyCode UP;
@@ -16,43 +19,41 @@ public class AI_Q implements AI {
     ArrayList<Experience> replay = new ArrayList<>();
     private int trainCount = 0;
     private final int TRAINSBEFORETNRESET = 20;
-    private final int REPLAYSIZE = 1000;
-    private final int BATCH = 1000;
+    private final int REPLAYSIZE = 100;
+    private final int BATCH = 10;
     private boolean start = true;
-    private float[][] s;
+    private float[][][] s;
     private int a;
-    private float[][] s_;
+    private float[][][] s_;
     private final float DISCOUNT = .9f;
     private final int FRAMESKIP = 1;
 
     private final boolean TRAINING = true;
 
-    AI_Q(String paddle) {
+    AI_Qcnn(String paddle) {
         String name = "";
         if (paddle.equals(PADDLELEFT)) {
             PADDLE = paddle;
             UP = P1UP;
             DOWN = P1DOWN;
-            name = "leftQ";
+            name = "leftQcnn";
         } else if (paddle.equals(PADDLERIGHT)) {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            name = "rightQ";
+            name = "rightQcnn";
         } else {
             throw new IllegalArgumentException();
         }
-        nn = new NN(name, 123456789, .1f, LossFunction.QUADRATIC(.5), Optimizer.VANILLA,
-                new Layer.Dense(8, 64, Activation.TANH, Initializer.XAVIER),
-                new Layer.Dense(64, 64, Activation.TANH, Initializer.XAVIER),
-                new Layer.Dense(64, 2, Activation.SIGMOID, Initializer.XAVIER)
+        nn = new NN(name, 123456789, .001f, LossFunction.QUADRATIC(.5), Optimizer.ADAM,
+                new Layer.Conv(1, 1, 16, 16, 16, 0, 0, Activation.TANH),//1-800-1200 conv(s=16) 7-1-16-16 = 7-50-75
+                new Layer.Flatten(1, 50, 75),//7-10-15 = 1050
+                new Layer.Dense(3750, 2, Activation.SIGMOID, Initializer.XAVIER)
         );
         nn.loadInsideJar();
         tn = nn.clone();
         tn.setLabel("Target Network");
         NNlib.setInfoUpdateRate(500);
-        NNlib.showInfo(infoLayers, nn);
-//        NNLib.showInfo(infoLayers, tn);
     }
 
     @Override
@@ -100,29 +101,18 @@ public class AI_Q implements AI {
         start = true;
     }
 
-    public float[][] getState() {
-        if (PADDLE.equals(PADDLELEFT)) {
-            return normalizeZScore(new float[][]{{
-                (float) ball.getBoundsInParent().getMinX(),
-                (float) ball.getBoundsInParent().getMaxX(),
-                (float) ball.getBoundsInParent().getMinY(),
-                (float) ball.getBoundsInParent().getMaxY(),
-                (float) ball.v.x,
-                (float) ball.v.y,
-                (float) p1.getBoundsInParent().getMinY(),
-                (float) p1.getBoundsInParent().getMaxY(),}});
-        } else if (PADDLE.equals(PADDLERIGHT)) {
-            return normalizeZScore(new float[][]{{
-                (float) ball.getBoundsInParent().getMinX(),
-                (float) ball.getBoundsInParent().getMaxX(),
-                (float) ball.getBoundsInParent().getMinY(),
-                (float) ball.getBoundsInParent().getMaxY(),
-                (float) ball.v.x,
-                (float) ball.v.y,
-                (float) p2.getBoundsInParent().getMinY(),
-                (float) p2.getBoundsInParent().getMaxY(),}});
+    public float[][][] getState() {
+        WritableImage image = ROOT.snapshot(new SnapshotParameters(), null);
+        PixelReader pr = image.getPixelReader();
+        int width = (int) image.getWidth();
+        int height = (int) image.getHeight();
+        float[][] pixelarray = new float[height][width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                pixelarray[y][x] = pr.getArgb(x, y);
+            }
         }
-        return null;
+        return new float[][][]{pixelarray};
     }
 
     public float getReward() {
@@ -143,7 +133,7 @@ public class AI_Q implements AI {
         }
     }
 
-    public void addExperience(float[][] s, int a, float r, float[][] s_, boolean t) {
+    public void addExperience(float[][][] s, int a, float r, float[][][] s_, boolean t) {
         replay.add(new Experience(s, a, r, s_, t));
         if (replay.size() > REPLAYSIZE) {
             replay.remove(0);
@@ -152,13 +142,13 @@ public class AI_Q implements AI {
 
     class Experience {
 
-        float[][] s;
+        float[][][] s;
         int a;
         float r;
-        float[][] s_;
+        float[][][] s_;
         boolean t;
 
-        Experience(float[][] state, int action, float reward, float[][] statePrime, boolean terminal) {
+        Experience(float[][][] state, int action, float reward, float[][][] statePrime, boolean terminal) {
             s = state;
             a = action;
             r = reward;

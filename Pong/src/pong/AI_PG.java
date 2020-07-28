@@ -6,78 +6,58 @@ import static pong.Pong.*;
 import pong.NNlib.*;
 import static pong.NNlib.*;
 
-public class AI_Q implements AI {
+public class AI_PG implements AI {
 
     final String PADDLE;
     final KeyCode UP;
     final KeyCode DOWN;
     NN nn;
-    NN tn;
-    ArrayList<Experience> replay = new ArrayList<>();
-    private int trainCount = 0;
-    private final int TRAINSBEFORETNRESET = 20;
-    private final int REPLAYSIZE = 1000;
-    private final int BATCH = 1000;
-    private boolean start = true;
-    private float[][] s;
-    private int a;
-    private float[][] s_;
-    private final float DISCOUNT = .9f;
+    ArrayList<float[][]> states = new ArrayList<>();
+    ArrayList<Integer> actions = new ArrayList<>();
+    private final float DISCOUNT = .99f;
+    private int trains = 0;
     private final int FRAMESKIP = 1;
 
     private final boolean TRAINING = true;
 
-    AI_Q(String paddle) {
+    AI_PG(String paddle) {
         String name = "";
         if (paddle.equals(PADDLELEFT)) {
             PADDLE = paddle;
             UP = P1UP;
             DOWN = P1DOWN;
-            name = "leftQ";
+            name = "leftPG";
         } else if (paddle.equals(PADDLERIGHT)) {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            name = "rightQ";
+            name = "rightPG";
         } else {
             throw new IllegalArgumentException();
         }
-        nn = new NN(name, 123456789, .1f, LossFunction.QUADRATIC(.5), Optimizer.VANILLA,
+        nn = new NN(name, 123456789, .00001f, LossFunction.CROSSENTROPY(1), Optimizer.RMSPROP,
                 new Layer.Dense(8, 64, Activation.TANH, Initializer.XAVIER),
                 new Layer.Dense(64, 64, Activation.TANH, Initializer.XAVIER),
-                new Layer.Dense(64, 2, Activation.SIGMOID, Initializer.XAVIER)
+                new Layer.Dense(64, 64, Activation.TANH, Initializer.XAVIER),
+                new Layer.Dense(64, 2, Activation.SOFTMAX, Initializer.XAVIER)
         );
         nn.loadInsideJar();
-        tn = nn.clone();
-        tn.setLabel("Target Network");
         NNlib.setInfoUpdateRate(500);
         NNlib.showInfo(infoLayers, nn);
-//        NNLib.showInfo(infoLayers, tn);
     }
 
     @Override
     public void update() {
         if (frames % FRAMESKIP == 0) {
-            if (start) {//Initial observation
-                s = getState();
-                start = false;
-            } else {
-                s_ = getState();
-                addExperience(s, a, 0, s_, false);
-                s = getState();
-            }
+            float[][] s = getState();
             //Decide on an action to take
-            if (nn.getRandom().nextDouble() < exploration) {
-                if (nn.getRandom().nextDouble() < .5) {
-                    a = 0;
-                } else {
-                    a = 1;
-                }
+            int a;
+            float[][] probabilities = (float[][]) nn.feedforward(s);
+//            print(probabilities);
+            if (nn.getRandom().nextFloat() < probabilities[0][0]) {
+                a = 0;
             } else {
-                float[][] Q_sa = (float[][]) nn.feedforward(s);
-//                print(s);
-//                print(Q_sa);
-                a = argmax(Q_sa);
+                a = 1;
             }
             //Input the action into the environment
             if (a == 0) {
@@ -87,17 +67,18 @@ public class AI_Q implements AI {
                 KEYS.put(UP, false);
                 KEYS.put(DOWN, true);
             }
+            states.add(s);
+            actions.add(a);
         }
     }
 
     @Override
     public void reset() {
-        s_ = getState();
-        addExperience(s, a, getReward(), s_, true);//Add terminal state
         if (TRAINING) {
             train();
+            states.clear();
+            actions.clear();
         }
-        start = true;
     }
 
     public float[][] getState() {
@@ -122,7 +103,7 @@ public class AI_Q implements AI {
                 (float) p2.getBoundsInParent().getMinY(),
                 (float) p2.getBoundsInParent().getMaxY(),}});
         }
-        return null;
+        throw new IllegalArgumentException("The PADDLE field must be initialized to either PADDLELEFT or PADDLERIGHT");
     }
 
     public float getReward() {
@@ -143,46 +124,17 @@ public class AI_Q implements AI {
         }
     }
 
-    public void addExperience(float[][] s, int a, float r, float[][] s_, boolean t) {
-        replay.add(new Experience(s, a, r, s_, t));
-        if (replay.size() > REPLAYSIZE) {
-            replay.remove(0);
-        }
-    }
-
-    class Experience {
-
-        float[][] s;
-        int a;
-        float r;
-        float[][] s_;
-        boolean t;
-
-        Experience(float[][] state, int action, float reward, float[][] statePrime, boolean terminal) {
-            s = state;
-            a = action;
-            r = reward;
-            s_ = statePrime;
-            t = terminal;
-        }
-    }
-
     void train() {
-        for (int i = 0; i < BATCH; i++) {
-            int index = nn.getRandom().nextInt(replay.size());
-            Experience e = replay.get(index);
-            float[][] Q_sa = (float[][]) nn.feedforward(e.s);
-            if (!e.t) {
-                float[][] Q_sa_ = (float[][]) tn.feedforward(e.s_);
-                Q_sa[0][e.a] = e.r + DISCOUNT * Q_sa_[0][argmax(Q_sa_)];
-            } else {
-                Q_sa[0][e.a] = e.r;
-            }
-            nn.backpropagation(e.s, Q_sa);
+        int timesteps = states.size() - 1;
+        float reward = getReward();
+        for (int t = timesteps; t >= 0; t--) {
+            float[][] labels = new float[1][2];
+            labels[0][actions.get(t)] = reward;
+            nn.backpropagation(states.get(t), labels);
+            reward *= DISCOUNT;
         }
-        trainCount++;
-        if (trainCount % TRAINSBEFORETNRESET == 0) {
-            tn.copyParameters(nn);
+        trains++;
+        if (trains % 100 == 0) {
             nn.saveInsideJar();
         }
     }

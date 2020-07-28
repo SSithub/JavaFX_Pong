@@ -1,20 +1,19 @@
 package pong;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import javafx.scene.input.KeyCode;
 import static pong.Pong.*;
-import pong.NNLib.*;
-import static pong.NNLib.*;
+import pong.NNlib.*;
+import static pong.NNlib.*;
 
 public class AI_Genetic implements AI {
 
     final String PADDLE;
     final KeyCode UP;
     final KeyCode DOWN;
-    Layer[] LAYERS = {new Layer.Dense(10, 50, ActivationFunction.LEAKYRELU, Initializer.HE),
+    Layer[] LAYERS = {new Layer.Dense(10, 50, Activation.LEAKYRELU, Initializer.HE),
 //        new Layer.Dense(50, 50, ActivationFunction.LEAKYRELU, Initializer.HE),
-        new Layer.Dense(50, 2, ActivationFunction.SIGMOID, Initializer.XAVIER)};
+        new Layer.Dense(50, 2, Activation.SIGMOID, Initializer.XAVIER)};
     final int POPULATION = 10000;
     int index = 0;
     int frames = 0;
@@ -40,8 +39,8 @@ public class AI_Genetic implements AI {
         } else {
             throw new IllegalArgumentException();
         }
-        base = new NNLib().new NN(name, 1, 0, null, null, LAYERS);
-        NNLib.showInfo(infoLayers, base);
+        base = new NN(name, 1, 0, null, null, LAYERS);
+        NNlib.showInfo(infoLayers, base);
         base.load();
         start();
     }
@@ -50,7 +49,7 @@ public class AI_Genetic implements AI {
     public void update() {
 //        if (Pong.frames % FRAMESKIP == 0) {
             frames++;
-            float[][] out = current.feedforward(getState());
+            float[][] out = (float[][]) current.feedforward(getState());
             int a;
 //            if (current.getRandom().nextDouble() < out[0][0]) {
 //                a = 0;
