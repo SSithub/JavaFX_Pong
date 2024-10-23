@@ -55,7 +55,7 @@ public class Pong extends Application {
     static Paddle p1 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P1COLOR);
     static Paddle p2 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, 11 * SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P2COLOR);
     
-    AI left = new AI_Basic(PADDLELEFT);
+    AI left = new AI_Blank(PADDLELEFT);
     AI right = new AI_PG(PADDLERIGHT);
 
     Timeline loop = new Timeline(new KeyFrame(Duration.millis(16), handler -> {

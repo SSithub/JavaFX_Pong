@@ -22,7 +22,7 @@ public class AI_Q implements AI {
     private float[][] s;
     private int a;
     private float[][] s_;
-    private final float DISCOUNT = .9f;
+    private final float DISCOUNT = .99f;
     private final int FRAMESKIP = 1;
 
     private final boolean TRAINING = true;
@@ -42,7 +42,7 @@ public class AI_Q implements AI {
         } else {
             throw new IllegalArgumentException();
         }
-        nn = new NN(name, 123456789, .1f, LossFunction.QUADRATIC(.5), Optimizer.VANILLA,
+        nn = new NN(name, 123456789, .00001f, LossFunction.QUADRATIC(.5), Optimizer.RMSPROP,
                 new Layer.Dense(8, 64, Activation.TANH, Initializer.XAVIER),
                 new Layer.Dense(64, 64, Activation.TANH, Initializer.XAVIER),
                 new Layer.Dense(64, 2, Activation.SIGMOID, Initializer.XAVIER)
