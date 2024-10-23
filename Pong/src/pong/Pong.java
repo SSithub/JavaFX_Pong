@@ -16,6 +16,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -23,7 +24,7 @@ public class Pong extends Application {
 
 //    static final int SCREENWIDTH = (int) Screen.getPrimary().getBounds().getWidth();
 //    static final int SCREENHEIGHT = (int) Screen.getPrimary().getBounds().getHeight();
-    static final int SCREENWIDTH = 1200;
+    static final int SCREENWIDTH = 1500;
     static final int SCREENHEIGHT = 800;
     static final Group ROOT = new Group();
     static final Rectangle BACKGROUND = new Rectangle(SCREENWIDTH, SCREENHEIGHT, Color.valueOf("0x363636"));
@@ -42,8 +43,8 @@ public class Pong extends Application {
 //    final String STYLE = "-fx-font: 100 '" + Font.getFamilies().get((int) (Math.random() * Font.getFamilies().size())) + "';";
     final String STYLE = "-fx-font: 100 'MS PGothic';";
     static String update = "";
-    static double exploration = 0.25;
-    static long frames = 1;
+    static double exploration = 0.2;
+    static long frames;
 
     static final int PADDLEHEIGHT = SCREENHEIGHT / 8;
     static final int PADDLEWIDTH = SCREENWIDTH / 100;
@@ -51,21 +52,22 @@ public class Pong extends Application {
     static final int MAXVELOCITY = 100;
     static final int PADDLESPEED = 10;
     static final int BALLSTARTSPEED = 5;
+    static final int FRAMESKIP = 3;
 
     static Paddle p1 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P1COLOR);
     static Paddle p2 = new Paddle(PADDLEWIDTH, PADDLEHEIGHT, 11 * SCREENWIDTH / 12 - PADDLEWIDTH / 2, SCREENHEIGHT / 2 - PADDLEHEIGHT / 2, P2COLOR);
     
-    AI left = new AI_Blank(PADDLELEFT);
-    AI right = new AI_PG(PADDLERIGHT);
+    AI right = new AI_Q(PADDLERIGHT);
+    AI left = new AI_Basic(PADDLELEFT);
 
     Timeline loop = new Timeline(new KeyFrame(Duration.millis(16), handler -> {
-        right.update();
-        left.update();
         if (update.equals(PADDLELEFT)) {
             reset(true);
         } else if (update.equals(PADDLERIGHT)) {
             reset(false);
         }
+        right.update();
+        left.update();
         if (KEYS.getOrDefault(P1UP, false)) {
             p1.moveUp();
         }
@@ -120,7 +122,6 @@ public class Pong extends Application {
         VBox box = new VBox(tf);
         box.setAlignment(Pos.BOTTOM_CENTER);
         box.setPrefSize(SCREENWIDTH, SCREENHEIGHT);
-        //Setting up objects and game loop
         ball = new Ball(BALLRADIUS, SCREENWIDTH / 2 - BALLRADIUS, SCREENHEIGHT / 2 - BALLRADIUS);
         ROOT.getChildren().addAll(BACKGROUND, box, p1, p2, ball);
         loop.setCycleCount(Animation.INDEFINITE);
@@ -155,7 +156,6 @@ public class Pong extends Application {
         eSlider.setTranslateY(40);
         eSlider.setPrefWidth(200);
         ROOT.getChildren().addAll(eSlider, label);
-        frames = 0;
     }
 
     @Override
@@ -169,12 +169,12 @@ public class Pong extends Application {
             KEYS.put(event.getCode(), false);
         });
         stage.setScene(scene);
-//        stage.setFullScreen(true);
         stage.setResizable(false);
-        stage.sizeToScene();
+        stage.setHeight(SCREENHEIGHT + 35);
+        stage.setWidth(SCREENWIDTH);
         stage.setFullScreenExitHint("");
         stage.show();
-//        System.out.println(P1SCORE.getFont().getName());
+        System.out.println(P1SCORE.getFont().getName());
     }
 
     public static void main(String[] args) {

@@ -3,8 +3,8 @@ package pong;
 import java.util.ArrayList;
 import javafx.scene.input.KeyCode;
 import static pong.Pong.*;
-import pong.NNlib.*;
-import static pong.NNlib.*;
+import pong.NNLib.*;
+import static pong.NNLib.*;
 
 public class AI_Q implements AI {
 
@@ -13,46 +13,43 @@ public class AI_Q implements AI {
     final KeyCode DOWN;
     NN nn;
     NN tn;
+    final double LR = .00001;//.00007
+    final BiFunction<float[][], float[][], Object[]> LF = LossFunction.HUBER(1);
+    final TriFunction<Float, float[][], float[][][], float[][][][]> OPT = Optimizer.AMSGRAD;
+    Layer[] LAYERS = {new LayerDense(18, 200, ActivationFunction.LEAKYRELU, Initializer.HE),
+        new LayerDense(200, 2, ActivationFunction.LINEAR, Initializer.VANILLA)};
     ArrayList<Experience> replay = new ArrayList<>();
     private int trainCount = 0;
-    private final int TRAINSBEFORETNRESET = 20;
-    private final int REPLAYSIZE = 1000;
-    private final int BATCH = 1000;
+
+    private final int TRAINSBEFORETNRESET = 10;
+    private final int REPLAYSIZE = 2000;
+    private final int BATCH = 500;
     private boolean start = true;
     private float[][] s;
     private int a;
     private float[][] s_;
-    private final float DISCOUNT = .99f;
-    private final int FRAMESKIP = 1;
+    private final float DISCOUNT = .9f;
 
     private final boolean TRAINING = true;
 
     AI_Q(String paddle) {
-        String name = "";
         if (paddle.equals(PADDLELEFT)) {
             PADDLE = paddle;
             UP = P1UP;
             DOWN = P1DOWN;
-            name = "leftQ";
+            nn = new NNLib().new NN("leftQ", 777, LR, LF, OPT, LAYERS);
+            tn = nn.clone();
         } else if (paddle.equals(PADDLERIGHT)) {
             PADDLE = paddle;
             UP = P2UP;
             DOWN = P2DOWN;
-            name = "rightQ";
+            nn = new NNLib().new NN("rightQ", 2, LR, LF, OPT, LAYERS);
+            tn = nn.clone();
         } else {
             throw new IllegalArgumentException();
         }
-        nn = new NN(name, 123456789, .00001f, LossFunction.QUADRATIC(.5), Optimizer.RMSPROP,
-                new Layer.Dense(8, 64, Activation.TANH, Initializer.XAVIER),
-                new Layer.Dense(64, 64, Activation.TANH, Initializer.XAVIER),
-                new Layer.Dense(64, 2, Activation.SIGMOID, Initializer.XAVIER)
-        );
-        nn.loadInsideJar();
-        tn = nn.clone();
-        tn.setLabel("Target Network");
-        NNlib.setInfoUpdateRate(500);
-        NNlib.showInfo(infoLayers, nn);
-//        NNLib.showInfo(infoLayers, tn);
+        nn.load();
+//        NNLib.graphJFX(false, nn);
     }
 
     @Override
@@ -74,9 +71,9 @@ public class AI_Q implements AI {
                     a = 1;
                 }
             } else {
-                float[][] Q_sa = (float[][]) nn.feedforward(s);
-//                print(s);
-//                print(Q_sa);
+                float[][] Q_sa = nn.feedforward(s);
+//                print(s,"state");
+//                print(Q_sa, "Q_sa");
                 a = argmax(Q_sa);
             }
             //Input the action into the environment
@@ -101,28 +98,26 @@ public class AI_Q implements AI {
     }
 
     public float[][] getState() {
-        if (PADDLE.equals(PADDLELEFT)) {
-            return normalizeZScore(new float[][]{{
-                (float) ball.getBoundsInParent().getMinX(),
-                (float) ball.getBoundsInParent().getMaxX(),
-                (float) ball.getBoundsInParent().getMinY(),
-                (float) ball.getBoundsInParent().getMaxY(),
-                (float) ball.v.x,
-                (float) ball.v.y,
-                (float) p1.getBoundsInParent().getMinY(),
-                (float) p1.getBoundsInParent().getMaxY(),}});
-        } else if (PADDLE.equals(PADDLERIGHT)) {
-            return normalizeZScore(new float[][]{{
-                (float) ball.getBoundsInParent().getMinX(),
-                (float) ball.getBoundsInParent().getMaxX(),
-                (float) ball.getBoundsInParent().getMinY(),
-                (float) ball.getBoundsInParent().getMaxY(),
-                (float) ball.v.x,
-                (float) ball.v.y,
-                (float) p2.getBoundsInParent().getMinY(),
-                (float) p2.getBoundsInParent().getMaxY(),}});
-        }
-        return null;
+        return normalTanh(new float[][]{{
+            (float) BACKGROUND.getBoundsInParent().getMinX(),
+            (float) BACKGROUND.getBoundsInParent().getMaxX(),
+            (float) BACKGROUND.getBoundsInParent().getMinY(),
+            (float) BACKGROUND.getBoundsInParent().getMaxY(),
+            (float) ball.getBoundsInParent().getMinX(),
+            (float) ball.getBoundsInParent().getMaxX(),
+            (float) ball.getBoundsInParent().getMinY(),
+            (float) ball.getBoundsInParent().getMaxY(),
+            (float) ball.v.x,
+            (float) ball.v.y,
+            (float) p1.getBoundsInParent().getMinX(),
+            (float) p1.getBoundsInParent().getMaxX(),
+            (float) p1.getBoundsInParent().getMinY(),
+            (float) p1.getBoundsInParent().getMaxY(),
+            (float) p2.getBoundsInParent().getMinX(),
+            (float) p2.getBoundsInParent().getMaxX(),
+            (float) p2.getBoundsInParent().getMinY(),
+            (float) p2.getBoundsInParent().getMaxY()
+        }});
     }
 
     public float getReward() {
@@ -171,19 +166,23 @@ public class AI_Q implements AI {
         for (int i = 0; i < BATCH; i++) {
             int index = nn.getRandom().nextInt(replay.size());
             Experience e = replay.get(index);
-            float[][] Q_sa = (float[][]) nn.feedforward(e.s);
+            float[][] Q_sa = nn.feedforward(e.s);
+            float[][] Q_sa_ = tn.feedforward(e.s_);
             if (!e.t) {
-                float[][] Q_sa_ = (float[][]) tn.feedforward(e.s_);
                 Q_sa[0][e.a] = e.r + DISCOUNT * Q_sa_[0][argmax(Q_sa_)];
+                nn.backpropagation(e.s, Q_sa);
             } else {
                 Q_sa[0][e.a] = e.r;
+                print(nn.feedforward(e.s), "before");
+                print(Q_sa, "Q_sa");
+                nn.backpropagation(e.s, Q_sa);
+                print(nn.feedforward(e.s), "after");
             }
-            nn.backpropagation(e.s, Q_sa);
         }
         trainCount++;
         if (trainCount % TRAINSBEFORETNRESET == 0) {
-            tn.copyParameters(nn);
-            nn.saveInsideJar();
+            tn = nn.clone();
+            nn.save();
         }
     }
 }
